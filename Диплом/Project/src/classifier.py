@@ -15,7 +15,7 @@ chunker_tool = TokenChunker(
 
 # Нейросеть
 class SimpleNet(nn.Module):
-    def __init__(self, input_size=768, num_classes=5):
+    def __init__(self, input_size=768, num_classes=11):
         super().__init__()
         self.layer1 = nn.Linear(input_size, 512)
         self.bn1 = nn.BatchNorm1d(512)
@@ -54,7 +54,7 @@ class ArticleClassifier:
         self.embedding_model.eval()
 
         # Загрузка классификатора
-        checkpoint = torch.load(models_dir / 'article_classifier.pth',
+        checkpoint = torch.load(models_dir / 'final_article_classifier.pth',
                                 map_location=self.device)
         self.classifier = SimpleNet(
             input_size=checkpoint['input_size'],
@@ -67,14 +67,16 @@ class ArticleClassifier:
         with open(models_dir / 'class_mapping.pkl', 'rb') as f:
             self.class_mapping = pickle.load(f)
         self.id_to_class = {v: k for k, v in self.class_mapping.items()}
+        self.class_names = list(self.class_mapping.keys())  # список для БД
 
     def get_embedding(self, text):
         chunks = chunker_tool(text)
         print('Создали чанки')
         chunk_embeddings = []
-        print(len(chunks))
+        n = len(chunks)
+        print(n)
 
-        for i in range(100):
+        for i in range(min(n, 100)):
             inputs = self.tokenizer(str(chunks[i]), return_tensors="pt").to(self.device)
 
             with torch.no_grad():

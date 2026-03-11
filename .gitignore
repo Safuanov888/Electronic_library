@@ -1,2 +1,5 @@
 /Диплом/Project/
-*./pdf
+*.pdf
+
+*.venv
+*.ini
