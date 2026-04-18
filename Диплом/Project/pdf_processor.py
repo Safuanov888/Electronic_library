@@ -1,16 +1,19 @@
 from PyPDF2 import PdfReader
 import re
+from typing import Optional, List
 
 
 def process_info(file):
+    """Очистка текста PDF от служебной информации."""
     with open(file, "rb") as f:
         reader = PdfReader(f)
         text = ''.join([page.extract_text() for page in reader.pages])
+
     # Служебная информация
     text = re.sub(r'ISSN\s+\d{4}-\d{3,4}[^\n]*', '', text)
     text = re.sub(r'\d{4};\d{2}\(\d+\):\d+–\d+', '', text)
 
-    # Авторы
+    # Авторы (в тексте)
     text = re.sub(r'[А-ЯЁ][а-яё]+\s+[А-ЯЁ][\.\s]+\s*[А-ЯЁ][\.\s]*', '', text)
     text = re.sub(r'[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][\.\s]+\s*[А-ЯЁ][\.\s]*', '', text)
     text = re.sub(r'\d+[\s\w\.,–-]+(университет|институт|академия|центр)[^\n]*', '', text)
@@ -46,3 +49,69 @@ def process_info(file):
     text = re.sub(r'(?:[A-Za-z-]+\s){3,}[A-Za-z-]*', '', text)
 
     return text
+
+
+def get_num_pages(file_path):
+    """Возвращает количество страниц в PDF."""
+    with open(file_path, "rb") as f:
+        reader = PdfReader(f)
+        return len(reader.pages)
+
+
+def extract_authors_from_filename(filename: str) -> Optional[List[str]]:
+    """
+    Извлекает авторов из имени файла.
+    Сначала ищет явный разделитель (-, –, —, _).
+    Если не найден, пытается выделить автора по шаблону "Фамилия И.О." в начале.
+    """
+    # Убираем расширение
+    name = re.sub(r'\.(pdf|PDF)$', '', filename)
+
+    # 1. Поиск явного разделителя
+    separators = r'\s*[-–—]\s*|\s+[-–—]\s+|_'
+    parts = re.split(separators, name, maxsplit=1)
+    if len(parts) >= 2:
+        author_part = parts[0].strip()
+        if author_part and _looks_like_author(author_part):
+            return _parse_authors(author_part)
+
+    # 2. Нет разделителя: ищем автора в начале строки по шаблону
+    ru_pattern = r'^([А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.(?:\s*[А-ЯЁ]\.)?)\s+(.*)$'
+    en_pattern = r'^([A-Z][a-z]+\s+[A-Z]\.(?:\s*[A-Z]\.)?)\s+(.*)$'
+
+    for pattern in [ru_pattern, en_pattern]:
+        match = re.match(pattern, name)
+        if match:
+            author_part = match.group(1).strip()
+            if _looks_like_author(author_part):
+                return _parse_authors(author_part)
+
+    return None
+
+
+def _looks_like_author(text: str) -> bool:
+    """Проверяет, похожа ли строка на ФИО автора."""
+    if not text or text[0].isdigit():
+        return False
+    if not re.search(r'[А-ЯA-Z]', text):
+        return False
+    if '.' not in text and ' ' not in text:
+        return False
+    if len(text) < 3:
+        return False
+    # Чёрный список общих слов
+    blacklist = r'библиотек|журнал|код|учебник|пособие|статья|лекция|курс|пример|глава|раздел'
+    if re.search(blacklist, text, re.IGNORECASE):
+        return False
+    return True
+
+
+def _parse_authors(author_part: str) -> List[str]:
+    """Разбивает строку на список авторов (по запятой, "и", "&")."""
+    authors_raw = re.split(r'\s*[,;]\s*|\s+и\s+|\s+&\s+', author_part)
+    authors = []
+    for raw in authors_raw:
+        raw = raw.strip().replace('_', ' ')
+        if raw and re.search(r'[А-ЯA-Z][а-яa-z]*\s*[\.]?\s*[А-ЯA-Z]?\.?', raw):
+            authors.append(raw)
+    return authors

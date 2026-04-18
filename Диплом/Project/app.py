@@ -4,8 +4,8 @@ import os
 from pathlib import Path
 
 from src.classifier import ArticleClassifier
-from db import create_connection, create_table, insert_article
-from pdf_processor import process_info
+from db import create_connection, create_tables, insert_article
+from pdf_processor import process_info, extract_authors_from_filename, get_num_pages
 
 # Настройка страницы
 st.set_page_config(page_title="Классификация книг", layout="centered")
@@ -48,16 +48,26 @@ if uploaded_file is not None:
             status_text.text(f"Получен класс: {class_name}. Сохранение в БД...")
             progress_bar.progress(80)
 
+            filename = uploaded_file.name
+            authors = extract_authors_from_filename(filename)
+            author_name = authors[0] if authors else None
+
+            # Получаем число страниц
+            num_pages = None
+            try:
+                num_pages = get_num_pages(tmp_path)
+            except Exception as e:
+                print(f"Не удалось получить число страниц: {e}")
+
             # Подключение к БД и сохранение
             conn = create_connection()
             if conn:
-                create_table(conn)
-                filename = uploaded_file.name  # используем имя файла как уникальный идентификатор
-                insert_article(conn, filename, class_name)
+                create_tables(conn)
+                filename = uploaded_file.name
+                insert_article(conn, filename, class_name, num_pages, author_name)
                 conn.close()
                 status_text.text("✅ Готово!")
                 progress_bar.progress(100)
-
                 st.success(f"Статья отнесена к классу: **{class_name}**")
                 st.info(f"Время обработки: {time_spent:.2f} сек")
             else:
@@ -65,5 +75,4 @@ if uploaded_file is not None:
         except Exception as e:
             st.error(f"Произошла ошибка: {e}")
         finally:
-            # Удаляем временный файл
             os.unlink(tmp_path)
