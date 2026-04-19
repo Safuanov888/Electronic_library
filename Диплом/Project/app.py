@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.classifier import ArticleClassifier
 from db import create_connection, create_tables, insert_article
-from pdf_processor import process_info, extract_authors_from_filename, get_num_pages
+from pdf_processor import process_info, get_num_pages, extract_author
 
 # Настройка страницы
 st.set_page_config(page_title="Классификация книг", layout="centered")
@@ -49,8 +49,7 @@ if uploaded_file is not None:
             progress_bar.progress(80)
 
             filename = uploaded_file.name
-            authors = extract_authors_from_filename(filename)
-            author_name = authors[0] if authors else None
+            author_name = extract_author(tmp_path, filename)
 
             # Получаем число страниц
             num_pages = None

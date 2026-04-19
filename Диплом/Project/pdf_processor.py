@@ -1,4 +1,4 @@
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 import re
 from typing import Optional, List
 
@@ -56,6 +56,22 @@ def get_num_pages(file_path):
     with open(file_path, "rb") as f:
         reader = PdfReader(f)
         return len(reader.pages)
+
+def get_author_from_metadata(file_path: str) -> str | None:
+    """
+    Извлекает автора из метаданных PDF.
+    Возвращает None, если поле 'author' отсутствует.
+    """
+    try:
+        with open(file_path, "rb") as f:
+            reader = PdfReader(f)
+            # Проверяем, существует ли метаданные и есть ли в них автор
+            if reader.metadata and reader.metadata.author:
+                # Приводим к обычной строке
+                return str(reader.metadata.author)
+    except Exception as e:
+        print(f"Не удалось прочитать метаданные PDF: {e}")
+    return None
 
 
 def extract_authors_from_filename(filename: str) -> Optional[List[str]]:
@@ -115,3 +131,21 @@ def _parse_authors(author_part: str) -> List[str]:
         if raw and re.search(r'[А-ЯA-Z][а-яa-z]*\s*[\.]?\s*[А-ЯA-Z]?\.?', raw):
             authors.append(raw)
     return authors
+
+def extract_author(file_path: str, filename: str) -> str | None:
+    """
+    Сначала пытается получить автора из метаданных PDF.
+    Если не удаётся, пробует извлечь из имени файла.
+    """
+    # 1. Пробуем взять из метаданных PDF
+    author = get_author_from_metadata(file_path)
+    if author:
+        return author
+
+    # 2. Резервный вариант: извлекаем из имени файла
+    authors_from_filename = extract_authors_from_filename(filename)
+    if authors_from_filename:
+        return authors_from_filename[0]
+
+    # 3. Если ничего не найдено, возвращаем None
+    return None
