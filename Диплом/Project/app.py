@@ -13,7 +13,7 @@ st.title("📚 Классификация книг")
 st.markdown("Загрузите PDF-файл статьи, и модель определит её тематику и сохранит результат в базу данных.")
 
 
-# Кэширование классификатора (загружается один раз)
+# Кэширование классификатора
 @st.cache_resource
 def load_classifier():
     with st.spinner("Загрузка модели..."):
@@ -22,8 +22,6 @@ def load_classifier():
 
 
 classifier = load_classifier()
-
-# Загрузка файла
 uploaded_file = st.file_uploader("Выберите PDF-файл", type=["pdf"])
 
 if uploaded_file is not None:

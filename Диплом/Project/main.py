@@ -3,12 +3,11 @@ from pdf_processor import process_info, extract_authors_from_filename, get_num_p
 from db import create_connection, create_tables, insert_article
 import os
 
+
 def main():
-    # Создаём классификатор
     classifier = ArticleClassifier()
     print('Взяли классификатор')
 
-    # Текст
     path = "D://ПРОГА/Проектики/Github/Electronic_library/Диплом/Данные/Тестовые/Литература. Философия"
     files = os.listdir(path)
     for file in files:
@@ -24,7 +23,6 @@ def main():
         author_name = authors[0] if authors else None
         num_pages = get_num_pages(file_path)
 
-        # Добавляем результат в БД
         conn = create_connection()
         if conn:
             create_tables(conn)

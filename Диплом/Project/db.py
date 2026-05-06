@@ -24,9 +24,8 @@ def create_connection():
 
 
 def create_tables(conn):
-    """Создаёт все таблицы."""
     with conn.cursor() as cur:
-        # Таблица классов
+        # Классы
         cur.execute("""
             CREATE TABLE IF NOT EXISTS Classes (
                 class_id SERIAL PRIMARY KEY,
@@ -34,7 +33,7 @@ def create_tables(conn):
             );
         """)
 
-        # Таблица книг
+        # Книги
         cur.execute("""
             CREATE TABLE IF NOT EXISTS Books (
                 book_id SERIAL PRIMARY KEY,
@@ -45,7 +44,7 @@ def create_tables(conn):
             );
         """)
 
-        # Таблица авторов
+        # Авторы
         cur.execute("""
             CREATE TABLE IF NOT EXISTS Authors (
                 author_id SERIAL PRIMARY KEY,
@@ -53,7 +52,7 @@ def create_tables(conn):
             );
         """)
 
-        # Таблица связи книга-автор
+        # Книги-авторы
         cur.execute("""
             CREATE TABLE IF NOT EXISTS BookAuthors (
                 book_author_id SERIAL PRIMARY KEY,
@@ -74,7 +73,6 @@ def create_tables(conn):
 
 
 def get_class_id(conn, class_name):
-    """Возвращает class_id по имени класса."""
     with conn.cursor() as cur:
         cur.execute("SELECT class_id FROM Classes WHERE class_name = %s;", (class_name,))
         row = cur.fetchone()

@@ -3,6 +3,8 @@ import torch.nn as nn
 import numpy as np
 import pickle
 import time
+import psutil
+import os
 from transformers import AutoModel, AutoTokenizer
 from pathlib import Path
 from chonkie import TokenChunker
@@ -13,7 +15,6 @@ chunker_tool = TokenChunker(
 )
 
 
-# Нейросеть
 class SimpleNet(nn.Module):
     def __init__(self, input_size=768, num_classes=11):
         super().__init__()
@@ -38,7 +39,6 @@ class SimpleNet(nn.Module):
         return x
 
 
-# Главный класс
 class ArticleClassifier:
     def __init__(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -68,6 +68,11 @@ class ArticleClassifier:
             self.class_mapping = pickle.load(f)
         self.id_to_class = {v: k for k, v in self.class_mapping.items()}
         self.class_names = list(self.class_mapping.keys())  # список для БД
+
+        process = psutil.Process(os.getpid())
+        mem_bytes = process.memory_info().rss
+        mem_mb = mem_bytes / (1024 ** 2)
+        print(f"Потребление оперативной памяти после загрузки моделей: {mem_mb:.1f} МБ")
 
     def get_embedding(self, text):
         chunks = chunker_tool(text)

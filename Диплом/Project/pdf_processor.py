@@ -4,7 +4,6 @@ from typing import Optional, List
 
 
 def process_info(file):
-    """Очистка текста PDF от служебной информации."""
     with open(file, "rb") as f:
         reader = PdfReader(f)
         text = ''.join([page.extract_text() for page in reader.pages])
@@ -13,7 +12,7 @@ def process_info(file):
     text = re.sub(r'ISSN\s+\d{4}-\d{3,4}[^\n]*', '', text)
     text = re.sub(r'\d{4};\d{2}\(\d+\):\d+–\d+', '', text)
 
-    # Авторы (в тексте)
+    # Авторы
     text = re.sub(r'[А-ЯЁ][а-яё]+\s+[А-ЯЁ][\.\s]+\s*[А-ЯЁ][\.\s]*', '', text)
     text = re.sub(r'[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][\.\s]+\s*[А-ЯЁ][\.\s]*', '', text)
     text = re.sub(r'\d+[\s\w\.,–-]+(университет|институт|академия|центр)[^\n]*', '', text)
@@ -23,45 +22,40 @@ def process_info(file):
     text = re.sub(r'\[\d+[,-]\d+\]', '', text)  # [1-3], [4,5]
     text = re.sub(r'\[[A-Za-z]+\d*\]', '', text)  # [A1], [B]
 
-    # email
+    # Email
     text = re.sub(r'\S+@\S+', '', text)
 
-    # английские разделы
+    # Английские разделы
     text = re.sub(r'Abstract[^\n]*[\s\S]*?(?=\n[А-ЯЁ]|$)', '', text)
     text = re.sub(r'Keywords[^\n]*[\s\S]*?(?=\n[А-ЯЁ]|$)', '', text)
     text = re.sub(r'For citation[^\n]*[\s\S]*?(?=\n[А-ЯЁ]|$)', '', text)
 
-    # ссылки
+    # Ссылки
     text = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', text)
     text = re.sub(r'DOI:\s*\S+', '', text)
 
-    # библиография
+    # Библиография
     text = re.sub(r'Список\s+источников[\s\S]*', '', text)
     text = re.sub(r'References[\s\S]*', '', text)
 
-    # спец.символы
+    # Спец.символы
     text = text.replace('\xa0', ' ').replace('•', '')
     text = re.sub(r'-\s+', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     text = re.sub(r'•\s*\n', '', text)
 
-    # оставшиеся английские фрагменты
+    # Оставшиеся английские фрагменты
     text = re.sub(r'(?:[A-Za-z-]+\s){3,}[A-Za-z-]*', '', text)
 
     return text
 
 
 def get_num_pages(file_path):
-    """Возвращает количество страниц в PDF."""
     with open(file_path, "rb") as f:
         reader = PdfReader(f)
         return len(reader.pages)
 
 def get_author_from_metadata(file_path: str) -> str | None:
-    """
-    Извлекает автора из метаданных PDF.
-    Возвращает None, если поле 'author' отсутствует.
-    """
     try:
         with open(file_path, "rb") as f:
             reader = PdfReader(f)
@@ -75,12 +69,6 @@ def get_author_from_metadata(file_path: str) -> str | None:
 
 
 def extract_authors_from_filename(filename: str) -> Optional[List[str]]:
-    """
-    Извлекает авторов из имени файла.
-    Сначала ищет явный разделитель (-, –, —, _).
-    Если не найден, пытается выделить автора по шаблону "Фамилия И.О." в начале.
-    """
-    # Убираем расширение
     name = re.sub(r'\.(pdf|PDF)$', '', filename)
 
     # 1. Поиск явного разделителя
@@ -91,7 +79,7 @@ def extract_authors_from_filename(filename: str) -> Optional[List[str]]:
         if author_part and _looks_like_author(author_part):
             return _parse_authors(author_part)
 
-    # 2. Нет разделителя: ищем автора в начале строки по шаблону
+    # 2. Нет разделителя, значит ищем автора в начале строки по шаблону
     ru_pattern = r'^([А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.(?:\s*[А-ЯЁ]\.)?)\s+(.*)$'
     en_pattern = r'^([A-Z][a-z]+\s+[A-Z]\.(?:\s*[A-Z]\.)?)\s+(.*)$'
 
@@ -106,7 +94,6 @@ def extract_authors_from_filename(filename: str) -> Optional[List[str]]:
 
 
 def _looks_like_author(text: str) -> bool:
-    """Проверяет, похожа ли строка на ФИО автора."""
     if not text or text[0].isdigit():
         return False
     if not re.search(r'[А-ЯA-Z]', text):
@@ -115,7 +102,7 @@ def _looks_like_author(text: str) -> bool:
         return False
     if len(text) < 3:
         return False
-    # Чёрный список общих слов
+
     blacklist = r'библиотек|журнал|код|учебник|пособие|статья|лекция|курс|пример|глава|раздел'
     if re.search(blacklist, text, re.IGNORECASE):
         return False
@@ -123,7 +110,6 @@ def _looks_like_author(text: str) -> bool:
 
 
 def _parse_authors(author_part: str) -> List[str]:
-    """Разбивает строку на список авторов (по запятой, "и", "&")."""
     authors_raw = re.split(r'\s*[,;]\s*|\s+и\s+|\s+&\s+', author_part)
     authors = []
     for raw in authors_raw:
@@ -133,16 +119,12 @@ def _parse_authors(author_part: str) -> List[str]:
     return authors
 
 def extract_author(file_path: str, filename: str) -> str | None:
-    """
-    Сначала пытается получить автора из метаданных PDF.
-    Если не удаётся, пробует извлечь из имени файла.
-    """
     # 1. Пробуем взять из метаданных PDF
     author = get_author_from_metadata(file_path)
     if author:
         return author
 
-    # 2. Резервный вариант: извлекаем из имени файла
+    # 2. Если не сработало, то извлекаем из имени файла
     authors_from_filename = extract_authors_from_filename(filename)
     if authors_from_filename:
         return authors_from_filename[0]
